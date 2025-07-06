@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>知识库对话</title>
+    <style>
+        #chatbox { width: 400px; height: 300px; border: 1px solid #ccc; overflow-y: auto; margin-bottom: 10px;}
+        #input { width: 300px;}
+    </style>
+</head>
+<body>
+    <h2>知识库对话</h2>
+    <div id="chatbox"></div>
+    <input id="input" type="text" placeholder="请输入问题..."/>
+    <button id="sendBtn">发送</button>
+    <script>
+        document.getElementById('sendBtn').onclick = async function() {
+            const input = document.getElementById('input');
+            const chatbox = document.getElementById('chatbox');
+            const userMsg = input.value;
+            if (!userMsg.trim()) return;
+            chatbox.innerHTML += `<div>你：${userMsg}</div>`;
+            input.value = "";
+
+            // 流式获取AI回复
+            const response = await fetch('http://127.0.0.1:8000/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: userMsg})
+            });
+
+            const reader = response.body.getReader();
+            let aiMsg = "AI：";
+            chatbox.innerHTML += `<div id="aiMsg">${aiMsg}</div>`;
+            let aiDiv = document.getElementById('aiMsg');
+            while(true) {
+                const {done, value} = await reader.read();
+                if(done) break;
+                aiMsg += new TextDecoder().decode(value);
+                aiDiv.innerText = aiMsg;
+            }
+            chatbox.scrollTop = chatbox.scrollHeight;
+            
+        };
+    </script>
+</body>
+</html>
