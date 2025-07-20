@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <meta charset="utf-8">
+  <title>外卖评价仲裁AI</title>
+</head>
+<body>
+  <h2>外卖评价仲裁</h2>
+  <form id="form" method="post">
+    外卖评价：<br>
+    <textarea name="comment_text" rows="3" cols="40"></textarea><br>
+    附图：<input type="file" name="comment_img" id="comment_img"><br><br>
+    <img id="comment_img_preview" style="max-width:200px;display:none;">
+    商家回复：<br>
+    <textarea name="reply_text" rows="3" cols="40"></textarea><br>
+    附图：<input type="file" name="reply_img" id="reply_img"><br><br>
+    <img id="reply_img_preview" style="max-width:200px;display:none;">
+    商家相关信息：<br>
+    <textarea name="related_text" rows="3" cols="40"></textarea><br>
+    <button type="submit">判断谁占理</button>
+  </form>
+  <button onclick="window.location.href='chat.html'">进入知识库对话</button>
+  <div id="result"></div>
+  <script>
+    alert('js loaded');
+    document.getElementById('form').onsubmit = async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const res = await fetch('http://192.168.31.94:8000/judge', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const mdHtml = marked.parse(data.result);
+      document.getElementById('result').innerHTML = `<b>AI判断：</b><div>${mdHtml}</div>`;
+    //   document.getElementById('result').innerHTML = `<b>AI判断：</b>${data.result}`;
+    }
+
+    document.getElementById('comment_img').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    console.log(file); // 新增
+    const preview = document.getElementById('comment_img_preview');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+  });
+
+  document.getElementById('reply_img').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    console.log(file); // 新增
+    const preview = document.getElementById('reply_img_preview');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+});
+  </script>
+</body>
+</html>
