@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库对话 - 智能助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-50px, -50px) rotate(360deg); }
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            font-size: 1em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .chat-area {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 15px 20px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-header i {
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .chat-header h3 {
+            color: #495057;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .chat-status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #chatbox {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+            scroll-behavior: smooth;
+            max-height: 60vh;
+        }
+
+        /* 自定义滚动条样式 */
+        #chatbox::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        #chatbox::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+            margin: 5px 0;
+        }
+
+        #chatbox::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
+        }
+
+        #chatbox::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a6fd8, #6a4190);
+        }
+
+        #chatbox::-webkit-scrollbar-corner {
+            background: #f1f1f1;
+        }
+
+        /* 滚动指示器 */
+        .scroll-indicator {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .scroll-dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .scroll-dot.active {
+            background: #667eea;
+            transform: scale(1.2);
+        }
+
+        /* 无限滚动容器 */
+        .infinite-scroll-container {
+            position: relative;
+            height: 100%;
+        }
+
+        /* 消息流容器 */
+        .message-stream {
+            min-height: 100%;
+            padding-bottom: 20px;
+        }
+
+        /* 滚动到底部按钮 */
+        .scroll-to-bottom {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .scroll-to-bottom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .scroll-to-bottom.show {
+            display: flex;
+            animation: bounceIn 0.5s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 加载更多按钮 */
+        .load-more {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .load-more-btn {
+            padding: 8px 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .load-more-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* 消息分组 */
+        .message-group {
+            margin-bottom: 20px;
+        }
+
+        .message-date {
+            text-align: center;
+            margin: 20px 0 10px 0;
+            color: #6c757d;
+            font-size: 0.9em;
+            position: relative;
+        }
+
+        .message-date::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e9ecef;
+            z-index: -1;
+        }
+
+        .message-date span {
+            background: white;
+            padding: 0 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .message.ai .message-avatar {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.ai .message-content {
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .input-area {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        #input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #sendBtn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #sendBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 18px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #6c757d;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .quick-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-1px);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                height: calc(100vh - 20px);
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .input-area {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .quick-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                返回
+            </a>
+            <h1>
+                <i class="fas fa-robot"></i>
+                智能知识库助手
+            </h1>
+            <p>基于AI的智能问答系统，为您提供专业的知识服务</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="askQuestion('今天天气怎么样？')">
+                    <i class="fas fa-cloud-sun"></i> 天气查询
+                </button>
+                <button class="quick-btn" onclick="askQuestion('现在几点了？')">
+                    <i class="fas fa-clock"></i> 时间查询
+                </button>
+                <button class="quick-btn" onclick="askQuestion('推荐上海有什么好吃的餐厅？')">
+                    <i class="fas fa-utensils"></i> 餐厅推荐
+                </button>
+                <button class="quick-btn" onclick="askQuestion('你能帮我做什么？')">
+                    <i class="fas fa-question-circle"></i> 功能介绍
+                </button>
+            </div>
+
+            <div class="chat-area">
+                <div class="chat-header">
+                    <i class="fas fa-comments"></i>
+                    <h3>对话窗口</h3>
+                    <div class="chat-status">
+                        <div class="status-dot"></div>
+                        <span>在线</span>
+                    </div>
+                </div>
+                
+                <div id="chatbox">
+                    <div class="infinite-scroll-container">
+                        <div class="scroll-indicator" id="scrollIndicator">
+                            <div class="scroll-dot" data-section="0"></div>
+                            <div class="scroll-dot" data-section="1"></div>
+                            <div class="scroll-dot" data-section="2"></div>
+                            <div class="scroll-dot" data-section="3"></div>
+                            <div class="scroll-dot" data-section="4"></div>
+                        </div>
+                        
+                        <div class="message-stream" id="messageStream">
+                            <div class="message ai">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    您好！我是您的智能助手，很高兴为您服务。我可以帮您查询天气、时间，推荐餐厅，回答各种问题。请告诉我您需要什么帮助？
+                                    <div class="message-time">刚刚</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="scroll-to-bottom" id="scrollToBottom" onclick="scrollToBottom()">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <i class="fas fa-robot"></i>
+                <span>AI正在思考中</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input id="input" type="text" placeholder="请输入您的问题..." />
+                </div>
+                <button id="sendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    发送
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <i class="fas fa-clock"></i>
+                <span>响应时间: < 1s</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-brain"></i>
+                <span>AI模型: 智能助手</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-shield-alt"></i>
+                <span>安全可靠</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById('chatbox');
+        const messageStream = document.getElementById('messageStream');
+        const input = document.getElementById('input');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const scrollToBottomBtn = document.getElementById('scrollToBottom');
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        
+        // 消息历史记录
+        let messageHistory = [];
+        let currentSection = 0;
+        let isScrolling = false;
+
+        // 添加消息到聊天框
+        function addMessage(content, isUser = false, timestamp = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = timestamp || getCurrentTime();
+            
+            contentDiv.appendChild(timeDiv);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+            
+            // 保存到历史记录
+            messageHistory.push({
+                content: content,
+                isUser: isUser,
+                timestamp: timestamp || getCurrentTime(),
+                element: messageDiv
+            });
+            
+            messageStream.appendChild(messageDiv);
+            scrollToBottom();
+            updateScrollIndicator();
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            chatbox.scrollTop = chatbox.scrollHeight;
+            scrollToBottomBtn.classList.remove('show');
+        }
+
+        // 更新滚动指示器
+        function updateScrollIndicator() {
+            const scrollTop = chatbox.scrollTop;
+            const scrollHeight = chatbox.scrollHeight;
+            const clientHeight = chatbox.clientHeight;
+            const scrollPercentage = scrollTop / (scrollHeight - clientHeight);
+            
+            // 更新滚动指示器
+            const dots = scrollIndicator.querySelectorAll('.scroll-dot');
+            dots.forEach((dot, index) => {
+                const sectionStart = index / dots.length;
+                const sectionEnd = (index + 1) / dots.length;
+                
+                if (scrollPercentage >= sectionStart && scrollPercentage < sectionEnd) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+            
+            // 检查是否需要显示滚动到底部按钮
+            if (scrollHeight - scrollTop - clientHeight > 100) {
+                scrollToBottomBtn.classList.add('show');
+            } else {
+                scrollToBottomBtn.classList.remove('show');
+            }
+        }
+
+        // 滚动到指定区域
+        function scrollToSection(sectionIndex) {
+            const scrollHeight = chatbox.scrollHeight;
+            const clientHeight = chatbox.clientHeight;
+            const sectionHeight = (scrollHeight - clientHeight) / 5; // 5个区域
+            const targetScrollTop = sectionHeight * sectionIndex;
+            
+            chatbox.scrollTo({
+                top: targetScrollTop,
+                behavior: 'smooth'
+            });
+        }
+
+        // 获取当前时间
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        // 显示/隐藏打字指示器
+        function showTypingIndicator() {
+            typingIndicator.style.display = 'flex';
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const userMsg = input.value.trim();
+            if (!userMsg) return;
+
+            // 添加用户消息
+            addMessage(userMsg, true);
+            input.value = "";
+
+            // 显示打字指示器
+            showTypingIndicator();
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+
+            try {
+                const response = await fetch('http://192.168.31.94:8000/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: userMsg})
+                });
+
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+
+                // 隐藏打字指示器
+                hideTypingIndicator();
+
+                // 创建AI消息容器
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.className = 'message ai';
+                
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.innerHTML = '<i class="fas fa-robot"></i>';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = '';
+                
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'message-time';
+                timeDiv.textContent = getCurrentTime();
+                
+                contentDiv.appendChild(timeDiv);
+                aiMessageDiv.appendChild(avatar);
+                aiMessageDiv.appendChild(contentDiv);
+                messageStream.appendChild(aiMessageDiv);
+
+                // 流式读取AI回复
+                const reader = response.body.getReader();
+                let aiMsg = '';
+                
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    
+                    const text = new TextDecoder().decode(value);
+                    aiMsg += text;
+                    const mdHtml = marked.parse(aiMsg);
+                    contentDiv.innerHTML = mdHtml;
+                    scrollToBottom();
+                }
+
+                // 保存AI回复到历史记录
+                messageHistory.push({
+                    content: aiMsg,
+                    isUser: false,
+                    timestamp: getCurrentTime(),
+                    element: aiMessageDiv
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                addMessage('抱歉，处理您的请求时出现了错误，请稍后重试。', false);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+            }
+        }
+
+        // 生成交替的对话历史用于演示无限滚动
+        function generateAlternatingMessages() {
+            const sampleConversations = [
+                { user: '今天天气怎么样？', ai: '根据当前天气数据，今天是个晴天，温度在20-25度之间，非常适合外出活动。建议您可以适当安排户外活动，记得带防晒用品。' },
+                { user: '推荐上海有什么好吃的餐厅？', ai: '我为您推荐几家上海特色餐厅：1. 德兴馆（广东路471号）- 百年本帮经典，人均47元；2. 上海老饭店（福佑路242号）- 传统八宝鸭，人均170元；3. 人和馆（肇嘉浜路407号）- 米其林+黑珍珠双料，人均150元。' },
+                { user: '现在几点了？', ai: '当前时间是下午2点30分。如果您需要更精确的时间，建议查看您的设备时钟。' },
+                { user: '你能帮我做什么？', ai: '我是您的智能助手，可以帮您：1. 查询天气信息；2. 获取当前时间；3. 推荐餐厅和美食；4. 回答各种问题；5. 提供生活建议。请告诉我您需要什么帮助！' },
+                { user: '这个系统怎么使用？', ai: '使用非常简单：1. 在输入框中输入您的问题；2. 点击发送按钮或按回车键；3. 等待AI回复；4. 可以继续提问进行对话。您也可以点击上方的快速按钮来体验不同功能。' }
+            ];
+            
+            // 交替添加用户和AI消息，模拟真实对话
+            sampleConversations.forEach((conv, index) => {
+                setTimeout(() => {
+                    addMessage(conv.user, true, `14:${25-index*2}`);
+                }, index * 2000); // 每2秒添加一条用户消息
+                
+                setTimeout(() => {
+                    addMessage(conv.ai, false, `14:${24-index*2}`);
+                }, index * 2000 + 1000); // 用户消息后1秒添加AI回复
+            });
+        }
+
+        // 快速提问功能
+        function askQuestion(question) {
+            input.value = question;
+            sendMessage();
+        }
+
+        // 事件监听器
+        sendBtn.addEventListener('click', sendMessage);
+        
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 聊天框滚动事件
+        chatbox.addEventListener('scroll', updateScrollIndicator);
+        
+        // 滚动指示器点击事件
+        scrollIndicator.addEventListener('click', function(e) {
+            if (e.target.classList.contains('scroll-dot')) {
+                const sectionIndex = parseInt(e.target.dataset.section);
+                scrollToSection(sectionIndex);
+            }
+        });
+
+        // 输入框焦点效果
+        input.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+        });
+
+        input.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+        });
+
+        // 页面加载动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach((message, index) => {
+                message.style.opacity = '0';
+                message.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    message.style.transition = 'all 0.5s ease';
+                    message.style.opacity = '1';
+                    message.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+            
+            // 生成演示用的交替对话历史
+            // setTimeout(() => {
+            //     generateAlternatingMessages();
+            // }, 1000);
+            
+            // 初始化滚动指示器
+            updateScrollIndicator();
+        });
+    </script>
+</body>
+</html>

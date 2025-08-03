@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外卖评价仲裁AI - 智能仲裁系统</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: white;
+      padding: 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+      animation: float 20s infinite linear;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-50px, -50px) rotate(360deg); }
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .form-section {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 15px;
+      border: 2px solid #e9ecef;
+      transition: all 0.3s ease;
+    }
+
+    .form-section:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+    }
+
+    .form-section h3 {
+      color: #495057;
+      margin-bottom: 20px;
+      font-size: 1.3em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-section h3 i {
+      color: #667eea;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #495057;
+      font-weight: 500;
+    }
+
+    .textarea-field {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 14px;
+      resize: vertical;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    .textarea-field:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .file-input-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .file-input-label:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .file-input-label i {
+      margin-right: 8px;
+    }
+
+    .image-preview {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .preview-image {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      display: none;
+      transition: all 0.3s ease;
+    }
+
+    .preview-image.show {
+      display: inline-block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .button-group {
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    .btn {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 0 10px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+    }
+
+    .result-container {
+      margin-top: 30px;
+      padding: 25px;
+      background: #f8f9fa;
+      border-radius: 15px;
+      border-left: 5px solid #667eea;
+      display: none;
+    }
+
+    .result-container.show {
+      display: block;
+      animation: slideIn 0.5s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      color: #495057;
+      font-weight: 600;
+    }
+
+    .result-content {
+      line-height: 1.6;
+      color: #495057;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #e9ecef;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      width: 0%;
+      transition: width 0.3s ease;
+      animation: progress 2s ease-in-out infinite;
+    }
+
+    @keyframes progress {
+      0%, 100% { width: 0%; }
+      50% { width: 100%; }
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-number {
+      font-size: 2em;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      color: #6c757d;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 2em;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-balance-scale"></i> 外卖评价仲裁AI</h1>
+      <p>智能分析，公正仲裁，让每一份评价都得到公平对待</p>
+    </div>
+  
+    <div class="content">
+  <form id="form" method="post">
+        <div class="form-grid">
+          <div class="form-section">
+            <h3><i class="fas fa-comment-dots"></i> 用户评价</h3>
+            <div class="input-group">
+              <label for="comment_text">评价内容：</label>
+              <textarea name="comment_text" id="comment_text" class="textarea-field" rows="4" placeholder="请输入用户的评价内容..."></textarea>
+            </div>
+            <div class="input-group">
+              <label>评价图片：</label>
+              <div class="file-input-wrapper">
+                <input type="file" name="comment_img" id="comment_img" class="file-input" accept="image/*">
+                <label for="comment_img" class="file-input-label">
+                  <i class="fas fa-image"></i> 选择图片
+                </label>
+              </div>
+              <div class="image-preview">
+                <img id="comment_img_preview" class="preview-image" alt="评价图片预览">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3><i class="fas fa-reply"></i> 商家回复</h3>
+            <div class="input-group">
+              <label for="reply_text">回复内容：</label>
+              <textarea name="reply_text" id="reply_text" class="textarea-field" rows="4" placeholder="请输入商家的回复内容..."></textarea>
+            </div>
+            <div class="input-group">
+              <label>回复图片：</label>
+              <div class="file-input-wrapper">
+                <input type="file" name="reply_img" id="reply_img" class="file-input" accept="image/*">
+                <label for="reply_img" class="file-input-label">
+                  <i class="fas fa-image"></i> 选择图片
+                </label>
+              </div>
+              <div class="image-preview">
+                <img id="reply_img_preview" class="preview-image" alt="回复图片预览">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3><i class="fas fa-info-circle"></i> 商家相关信息</h3>
+          <div class="input-group">
+            <label for="related_text">相关信息：</label>
+            <textarea name="related_text" id="related_text" class="textarea-field" rows="3" placeholder="请输入商家的相关信息，如历史评价、店铺评分等..."></textarea>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button id="sendBtn" type="submit" class="btn btn-primary">
+            <i class="fas fa-gavel"></i> 开始智能仲裁
+          </button>
+          <a href="/frontend/chat.html" class="btn btn-secondary">
+            <i class="fas fa-comments"></i> 进入知识库对话
+          </a>
+        </div>
+  </form>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>AI正在分析中，请稍候...</p>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="result-container" id="result">
+        <div class="result-header">
+          <i class="fas fa-lightbulb"></i>
+          <span>AI仲裁结果</span>
+        </div>
+        <div class="result-content" id="result-content"></div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-number">98%</div>
+          <div class="stat-label">准确率</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">5000+</div>
+          <div class="stat-label">已处理案例</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">3.2s</div>
+          <div class="stat-label">平均处理时间</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">99.9%</div>
+          <div class="stat-label">系统可用性</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 图片预览功能
+    function setupImagePreview(inputId, previewId) {
+      const input = document.getElementById(inputId);
+      const preview = document.getElementById(previewId);
+      
+      input.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+              preview.src = e.target.result;
+            preview.classList.add('show');
+          }
+          reader.readAsDataURL(file);
+      } else {
+          preview.src = '';
+          preview.classList.remove('show');
+        }
+      });
+    }
+
+    // 设置图片预览
+    setupImagePreview('comment_img', 'comment_img_preview');
+    setupImagePreview('reply_img', 'reply_img_preview');
+
+    // 表单提交处理
+    document.getElementById('form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      // 显示加载状态
+      const loading = document.getElementById('loading');
+      const result = document.getElementById('result');
+      const sendBtn = document.getElementById('sendBtn');
+      
+      loading.style.display = 'block';
+      result.classList.remove('show');
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+
+      try {
+        const formData = new FormData(this);
+        const res = await fetch('http://192.168.31.94:8000/judge', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          throw new Error('网络请求失败');
+        }
+
+        const reader = res.body.getReader();
+        let resultContent = '';
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const text = new TextDecoder().decode(value);
+          resultContent += text;
+          
+          // 实时更新结果
+          const mdHtml = marked.parse(resultContent);
+          document.getElementById('result-content').innerHTML = mdHtml;
+        }
+
+        // 显示结果
+        result.classList.add('show');
+        
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('result-content').innerHTML = 
+          '<div style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> 处理失败，请稍后重试</div>';
+        result.classList.add('show');
+      } finally {
+        // 隐藏加载状态
+        loading.style.display = 'none';
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-gavel"></i> 开始智能仲裁';
+      }
+    });
+
+    // 添加输入验证
+    document.querySelectorAll('.textarea-field').forEach(textarea => {
+      textarea.addEventListener('input', function() {
+        if (this.value.trim()) {
+          this.style.borderColor = '#28a745';
+        } else {
+          this.style.borderColor = '#e9ecef';
+        }
+      });
+    });
+
+    // 添加动画效果
+    document.addEventListener('DOMContentLoaded', function() {
+      const sections = document.querySelectorAll('.form-section');
+      sections.forEach((section, index) => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+          section.style.transition = 'all 0.6s ease';
+          section.style.opacity = '1';
+          section.style.transform = 'translateY(0)';
+        }, index * 200);
+      });
+    });
+  </script>
+</body>
+</html>
